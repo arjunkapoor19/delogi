@@ -1,229 +1,176 @@
-"use client";
+"use client"; // This component uses state and event handlers, so it must be a Client Component.
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Header } from '@/components/navigation/header';
-import { ArrowLeft, Building, Truck, Shield } from 'lucide-react';
+import React, { useState, ChangeEvent } from 'react';
+import Link from 'next/link'; // Use Next.js Link
+import { Mail, Lock, Building, User, ArrowRight, Loader2 } from 'lucide-react';
+import { supabase } from '../../lib/supabase'; // Adjusted path for Next.js
 
-export default function SignupPage() {
-  const [step, setStep] = useState(1);
-  const [userRole, setUserRole] = useState<string>('');
+// Import shadcn/ui components (or your equivalent UI library components)
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+
+const SignupPage: React.FC = () => {
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+    name: '',
     email: '',
     password: '',
     confirmPassword: '',
     company: '',
-    phone: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  const handleRoleSelect = (role: string) => {
-    setUserRole(role);
-    setStep(2);
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle signup logic here
-    console.log('Signup attempt:', { ...formData, role: userRole });
-  };
-
-  const roleOptions = [
-    {
-      id: 'brand',
-      title: 'Luxury Brand',
-      description: 'Register and track your products',
-      icon: Building,
-      features: ['Product registration', 'Digital passport creation', 'Analytics dashboard']
-    },
-    {
-      id: 'logistics',
-      title: 'Logistics Partner',
-      description: 'Scan and update product journey',
-      icon: Truck,
-      features: ['QR code scanning', 'Location tracking', 'Status updates']
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match.');
+      return;
     }
-  ];
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    // 1. Sign up the user (this logic remains the same)
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email: formData.email,
+      password: formData.password,
+      // You can add metadata here if needed
+      options: {
+        data: {
+          full_name: formData.name,
+          company_name: formData.company,
+        }
+      }
+    });
+
+    if (signUpError) {
+      setError(signUpError.message);
+      setLoading(false);
+      return;
+    }
+
+    if (!data.user) {
+      setError("An unknown error occurred. User not created.");
+      setLoading(false);
+      return;
+    }
+
+    // 2. Insert data into public tables. This is often handled better by a database trigger or edge function
+    //    that runs after a new user is created in the auth.users table.
+    //    However, doing it on the client-side like this is also fine for smaller projects.
+    const { error: profileError } = await supabase.from('users').insert({
+      id: data.user.id,
+      full_name: formData.name,
+      company_name: formData.company,
+      role: 'brand',
+    });
+
+    const { error: businessError } = await supabase.from('businesses').insert({
+      // Assuming the business ID should also be the user's ID for a 1-to-1 relationship
+      id: data.user.id, 
+      company_name: formData.company,
+    });
+
+    if (profileError || businessError) {
+      const dbError = profileError || businessError;
+      setError(`Could not save profile information: ${dbError?.message}. Please contact support.`);
+    } else {
+      setSuccess("Success! Please check your email for a confirmation link to activate your account.");
+    }
+    setLoading(false);
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-      <Header />
-      
-      <div className="container mx-auto px-4 py-16 flex items-center justify-center min-h-[calc(100vh-4rem)]">
-        <div className="w-full max-w-4xl">
-          <div className="mb-8">
-            <Link href="/" className="inline-flex items-center text-muted-foreground hover:text-primary transition-colors">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to home
-            </Link>
+    <div className="min-h-screen bg-dark-900 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-gradient-to-r from-blue-600/20 to-transparent rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-gradient-to-l from-yellow-400/10 to-transparent rounded-full blur-3xl animate-pulse delay-1000"></div>
+
+      <div className="relative w-full max-w-lg">
+        <div className="relative p-8 md:p-12 rounded-2xl bg-slate-800/50 backdrop-blur-xl border border-slate-700/50">
+          <div className="text-center mb-10">
+            <h1 className="text-4xl font-bold text-white mb-3">Begin Your Legacy</h1>
+            <p className="text-slate-400">Register your brand and secure your products on the blockchain.</p>
           </div>
 
-          {step === 1 && (
-            <div className="text-center mb-12">
-              <div className="mx-auto h-16 w-16 rounded-full bg-primary flex items-center justify-center mb-6">
-                <Shield className="h-8 w-8 text-primary-foreground" />
+          {success ? (
+            <div className="text-center p-4 bg-green-900/50 border border-green-700 rounded-lg">
+              <h3 className="font-bold text-green-300">Check Your Inbox!</h3>
+              <p className="text-green-400 mt-2">{success}</p>
+              {/* FIX: Changed <Link to="..."> to <Link href="..."> */}
+              <Link href="/login" className="mt-4 inline-block font-medium text-blue-400 hover:text-blue-300">Back to Sign In</Link>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* FIX: Refactored Inputs to work with shadcn/ui structure */}
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-slate-300">Full Name</Label>
+                <div className="relative flex items-center">
+                  <User className="absolute left-3 h-5 w-5 text-slate-400" />
+                  <Input id="name" type="text" value={formData.name} onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('name', e.target.value)} required placeholder="e.g., Jean-Claude Biver" className="pl-10" />
+                </div>
               </div>
-              <h1 className="text-3xl font-bold mb-4">Join Delogi</h1>
-              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Choose your role to get started with luxury goods authentication
+
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-slate-300">Email</Label>
+                <div className="relative flex items-center">
+                  <Mail className="absolute left-3 h-5 w-5 text-slate-400" />
+                  <Input id="email" type="email" value={formData.email} onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('email', e.target.value)} required placeholder="your@company.com" className="pl-10" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="company" className="text-slate-300">Company Name</Label>
+                <div className="relative flex items-center">
+                  <Building className="absolute left-3 h-5 w-5 text-slate-400" />
+                  <Input id="company" type="text" value={formData.company} onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('company', e.target.value)} required placeholder="e.g., LVMH" className="pl-10" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password"  className="text-slate-300">Password</Label>
+                <div className="relative flex items-center">
+                  <Lock className="absolute left-3 h-5 w-5 text-slate-400" />
+                  <Input id="password" type="password" value={formData.password} onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('password', e.target.value)} required placeholder="Create a strong password" className="pl-10" />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword"  className="text-slate-300">Confirm Password</Label>
+                <div className="relative flex items-center">
+                    <Lock className="absolute left-3 h-5 w-5 text-slate-400" />
+                    <Input id="confirmPassword" type="password" value={formData.confirmPassword} onChange={(e: ChangeEvent<HTMLInputElement>) => handleInputChange('confirmPassword', e.target.value)} required placeholder="Confirm your password" className="pl-10" />
+                </div>
+              </div>
+              
+              {error && <div className="p-3 bg-red-900/40 text-red-300 border border-red-700 rounded-md text-sm">{error}</div>}
+
+              {/* FIX: Refactored Button to handle loading state */}
+              <Button type="submit" className="w-full !mt-8" size="lg" disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Register Brand & Create Account <ArrowRight className="inline ml-2"/>
+              </Button>
+            </form>
+          )}
+
+          {!success && (
+            <div className="mt-8 text-center">
+              <p className="text-sm text-slate-400">Already have a brand account?{' '}
+                {/* FIX: Changed <Link to="..."> to <Link href="..."> */}
+                <Link href="/login" className="font-medium text-blue-400 hover:text-blue-300">Sign In</Link>
               </p>
             </div>
-          )}
-
-          {step === 1 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              {roleOptions.map((role) => (
-                <Card 
-                  key={role.id} 
-                  className="p-8 cursor-pointer hover:shadow-lg transition-all duration-300 card-glass hover:scale-105"
-                  onClick={() => handleRoleSelect(role.id)}
-                >
-                  <CardHeader className="text-center">
-                    <div className="mx-auto h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                      <role.icon className="h-8 w-8 text-primary" />
-                    </div>
-                    <CardTitle className="text-2xl">{role.title}</CardTitle>
-                    <CardDescription className="text-base">{role.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-3">
-                      {role.features.map((feature, index) => (
-                        <li key={index} className="flex items-center text-sm">
-                          <div className="h-2 w-2 rounded-full bg-primary mr-3" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {step === 2 && (
-            <Card className="max-w-md mx-auto shadow-2xl card-glass">
-              <CardHeader className="text-center">
-                <CardTitle className="text-2xl font-bold">Create your account</CardTitle>
-                <CardDescription className="text-base">
-                  {userRole === 'brand' ? 'Register as a luxury brand' : 'Register as a logistics partner'}
-                </CardDescription>
-              </CardHeader>
-              
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name</Label>
-                      <Input
-                        id="firstName"
-                        placeholder="John"
-                        value={formData.firstName}
-                        onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name</Label>
-                      <Input
-                        id="lastName"
-                        placeholder="Doe"
-                        value={formData.lastName}
-                        onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="john@company.com"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="company">Company Name</Label>
-                    <Input
-                      id="company"
-                      placeholder="Your company name"
-                      value={formData.company}
-                      onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="+1 (555) 000-0000"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Create a strong password"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      placeholder="Confirm your password"
-                      value={formData.confirmPassword}
-                      onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="flex space-x-4">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      className="flex-1"
-                      onClick={() => setStep(1)}
-                    >
-                      Back
-                    </Button>
-                    <Button type="submit" className="flex-1 btn-primary">
-                      Create Account
-                    </Button>
-                  </div>
-                </form>
-
-                <div className="mt-6 text-center text-sm">
-                  <span className="text-muted-foreground">Already have an account? </span>
-                  <Link href="/login" className="text-primary hover:underline font-medium">
-                    Sign in
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
           )}
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default SignupPage;
