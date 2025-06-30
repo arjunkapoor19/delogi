@@ -162,7 +162,7 @@ export default function LandingPage() {
             <span className="bg-gradient-to-r from-blue-300 to-white bg-clip-text text-transparent">Verifiable Luxury. Immutable Trust.</span>
           </div>
           <p className={`text-xl text-gray-300 mb-12 max-w-3xl mx-auto transition-all duration-1000 delay-500 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-            Authenticating the world's finest goods on the Algorand blockchain. Experience the new standard of provenance.
+            Authenticating the world&apos;s finest goods on the Algorand blockchain. Experience the new standard of provenance.
           </p>
           <div className={`flex flex-col sm:flex-row gap-6 justify-center items-center transition-all duration-1000 delay-700 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
             <Link href="/verify" className="group relative px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 rounded-full text-lg font-semibold hover:from-blue-500 hover:to-blue-600 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl">
@@ -241,7 +241,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 text-center">
           <div className="scroll-animate">
             <h2 className="text-5xl font-bold mb-8 bg-gradient-to-r from-white to-blue-300 bg-clip-text text-transparent">Powered by Algorand</h2>
-            <p className="text-xl text-gray-300 mb-12 max-w-3xl mx-auto">Built on the world's most advanced blockchain technology for speed, security, and sustainability.</p>
+            <p className="text-xl text-gray-300 mb-12 max-w-3xl mx-auto">Built on the world&apos;s most advanced blockchain technology for speed, security, and sustainability.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-8 mt-16">
             {[{label: "Transaction Speed", value: 1000, suffix: "/sec"}, {label: "Finality Time", value: 4, suffix: " seconds"}, {label: "Energy Efficiency", value: 99.9, suffix: "% less energy"}].map((stat, index) => (
